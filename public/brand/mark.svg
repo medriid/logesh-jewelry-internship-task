@@ -1,0 +1,16 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100" width="100" height="100" role="img" aria-label="Loupe">
+  <title>Loupe</title>
+  <defs>
+    <linearGradient id="lpe-gold" x1="14%" y1="6%" x2="86%" y2="94%">
+      <stop offset="0%"   stop-color="#F7E9C4"/>
+      <stop offset="26%"  stop-color="#D4B063"/>
+      <stop offset="58%"  stop-color="#A8802F"/>
+      <stop offset="100%" stop-color="#5E4415"/>
+    </linearGradient>
+  </defs>
+  <!-- Bezel. The gradient sweep is the polish. -->
+  <circle cx="50" cy="50" r="44" fill="none" stroke="url(#lpe-gold)" stroke-width="4.5"/>
+  <!-- Glass, set inboard and lighter, so the lens sits recessed in its housing.
+       This ring is the whole difference between a loupe and a wedding band. -->
+  <circle cx="50" cy="50" r="33.5" fill="none" stroke="url(#lpe-gold)" stroke-width="1.5" opacity="0.62"/>
+</svg>

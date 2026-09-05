@@ -16,7 +16,8 @@ const securityHeaders = [
   // Deny every powerful browser feature we do not use.
   {
     key: 'Permissions-Policy',
-    value: 'accelerometer=(), autoplay=(), camera=(), display-capture=(), encrypted-media=(), geolocation=(), gyroscope=(), magnetometer=(), microphone=(), midi=(), payment=(), usb=(), xr-spatial-tracking=()',
+    value:
+      'accelerometer=(), autoplay=(), camera=(), display-capture=(), encrypted-media=(), geolocation=(), gyroscope=(), magnetometer=(), microphone=(), midi=(), payment=(), usb=(), xr-spatial-tracking=()',
   },
   { key: 'Cross-Origin-Opener-Policy', value: 'same-origin' },
   { key: 'Cross-Origin-Resource-Policy', value: 'same-origin' },
@@ -31,10 +32,10 @@ const nextConfig: NextConfig = {
   // Do not advertise the framework version to attackers scanning for CVEs.
   poweredByHeader: false,
 
-  // A failing type check or lint must fail the build. These default to `false`
-  // already; they are pinned explicitly so nobody "temporarily" flips them.
+  // A failing type check must fail the build. This defaults to `false` already;
+  // it is pinned explicitly so nobody "temporarily" flips it. (Next 16 no longer
+  // runs ESLint during `next build` — `npm run verify` and CI do.)
   typescript: { ignoreBuildErrors: false },
-  eslint: { ignoreDuringBuilds: false },
 
   images: {
     // Allowlist, not wildcard: /_next/image is a server-side fetcher, and an open

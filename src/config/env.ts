@@ -47,8 +47,16 @@ const schema = z
     ARGON2_PARALLELISM: z.coerce.number().int().min(1).max(8).default(1),
 
     /** Idle and absolute session lifetimes, in seconds. */
-    SESSION_IDLE_TTL_SECONDS: z.coerce.number().int().positive().default(60 * 60 * 12),
-    SESSION_ABSOLUTE_TTL_SECONDS: z.coerce.number().int().positive().default(60 * 60 * 24 * 7),
+    SESSION_IDLE_TTL_SECONDS: z.coerce
+      .number()
+      .int()
+      .positive()
+      .default(60 * 60 * 12),
+    SESSION_ABSOLUTE_TTL_SECONDS: z.coerce
+      .number()
+      .int()
+      .positive()
+      .default(60 * 60 * 24 * 7),
 
     /**
      * Rate limiting. Without Upstash credentials the app falls back to an in-process
@@ -62,7 +70,12 @@ const schema = z
     CORS_ALLOWED_ORIGINS: z
       .string()
       .default('')
-      .transform((v) => v.split(',').map((s) => s.trim()).filter(Boolean)),
+      .transform((v) =>
+        v
+          .split(',')
+          .map((s) => s.trim())
+          .filter(Boolean),
+      ),
 
     /** Direct-to-storage image uploads. Optional; uploads 503 without them. */
     CLOUDINARY_CLOUD_NAME: z.string().optional(),
@@ -118,7 +131,9 @@ function load(): Env {
   const parsed = schema.safeParse(process.env);
 
   if (!parsed.success) {
-    const lines = parsed.error.issues.map((i) => `  • ${i.path.join('.') || '(root)'}: ${i.message}`);
+    const lines = parsed.error.issues.map(
+      (i) => `  • ${i.path.join('.') || '(root)'}: ${i.message}`,
+    );
     // Deliberately a hard crash: a half-configured server is worse than no server.
     throw new Error(`Invalid environment configuration:\n${lines.join('\n')}\n`);
   }

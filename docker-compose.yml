@@ -1,0 +1,28 @@
+# Optional. The default local setup needs none of this — PGlite runs Postgres
+# in-process (see docs/adr/0002-postgres-everywhere.md). Use this only if you
+# prefer a real server locally, or need to test connection-pool behaviour, which
+# PGlite cannot reproduce.
+#
+#   docker compose up -d
+#   DATABASE_DRIVER=postgres DATABASE_URL=postgres://loupe:loupe@localhost:5432/loupe npm run db:migrate
+
+services:
+  postgres:
+    image: postgres:17-alpine
+    container_name: loupe-postgres
+    environment:
+      POSTGRES_USER: loupe
+      POSTGRES_PASSWORD: loupe
+      POSTGRES_DB: loupe
+    ports:
+      - '5432:5432'
+    volumes:
+      - loupe-pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ['CMD-SHELL', 'pg_isready -U loupe -d loupe']
+      interval: 5s
+      timeout: 3s
+      retries: 10
+
+volumes:
+  loupe-pgdata:

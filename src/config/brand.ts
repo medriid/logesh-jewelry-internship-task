@@ -1,30 +1,30 @@
 /**
- * The single place the storefront's identity lives.
+ * The single place the brand's identity lives.
  *
  * Everything a white-label deployment needs to change — name, palette, currency,
  * tax posture, hallmarking language, contact details — is here. No brand string
- * is hard-coded anywhere else in the codebase; `npm run verify` includes a lint
- * pass that fails if one shows up in `src/app` or `src/components`.
+ * is hard-coded anywhere else in the codebase.
  *
- * Rename the brand: change `name` and `wordmark`. Nothing else needs to move.
+ * Rename the brand: change `name` and `legalName`. Nothing else moves.
  */
 
 export const brand = {
-  /** Short wordmark. Appears in the header, page titles, OG tags, email subjects. */
-  name: 'Auric',
-
-  /** Full legal/marketing name used in footers, invoices, and structured data. */
-  legalName: 'Auric Fine Jewellery',
-
   /**
-   * "Au" is gold's element symbol; *auric* is the chemical adjective for gold(III)
-   * compounds — literally "of gold" — and it reads as *aura*. Kept here so the
-   * story survives a handover.
+   * A loupe is the jeweller's 10× lens — the one tool in the trade whose entire
+   * purpose is verification. You hand someone a loupe when you have nothing to
+   * hide, which is the argument this whole API makes: net weight, making charge,
+   * the day's gold rate and the BIS hallmark number are all public fields, not
+   * things buried behind a sticker price. It reads as *loop* too — a chain, a ring.
    */
-  tagline: 'Weighed in gold. Kept for generations.',
+  name: 'Loupe',
+
+  legalName: 'Loupe Fine Jewellery',
+  domain: 'loupe.jewelry',
+
+  tagline: 'Look closer.',
 
   description:
-    'Hallmarked 22K gold jewellery, priced transparently against the day’s gold rate.',
+    'Hallmarked 22K gold, priced in the open against the day’s rate. Every gram accounted for.',
 
   locale: 'en-IN',
   timezone: 'Asia/Kolkata',
@@ -43,12 +43,12 @@ export const brand = {
 
   tax: {
     /**
-     * GST on gold jewellery in India: 3% on the article. Basis points so we can
-     * express 0.5% cess-style rates without decimals. Overridable per product.
+     * GST on gold jewellery in India: 3% on the article. Basis points, so a 0.5%
+     * cess-style rate needs no decimals. Overridable per product.
      */
     defaultRateBasisPoints: 300,
     label: 'GST',
-    /** Catalog prices are quoted tax-exclusive and GST is shown as a line item. */
+    /** Catalog prices are quoted tax-exclusive; GST is shown as its own line. */
     pricesIncludeTax: false,
   },
 
@@ -56,25 +56,31 @@ export const brand = {
     /** BIS is the Indian hallmarking authority; 916 is the purity mark for 22K. */
     authority: 'BIS',
     authorityFullName: 'Bureau of Indian Standards',
-    /** Purity marks by karat, printed on product detail pages. */
-    puritySealByKarat: { 24: '999', 22: '916', 18: '750', 14: '585' } as const,
+    puritySealByKarat: { 24: '999', 22: '916', 18: '750', 14: '585', 9: '375' } as const,
   },
 
   contact: {
-    supportEmail: 'care@auric.example',
+    supportEmail: 'care@loupe.jewelry',
     supportPhone: '+91 00000 00000',
     whatsapp: '+910000000000',
   },
 
   /**
    * Design tokens. The storefront and admin console read these; nothing hardcodes
-   * a hex value. Swapping these three lines re-skins the entire surface.
+   * a hex value. Swapping these lines re-skins the entire surface.
    */
   theme: {
+    /** Gold is always a gradient in use — a flat fill of this reads as mustard. */
     gold: '#B08D3F',
-    goldLight: '#E7D3A1',
-    ink: '#1A1714',
-    parchment: '#FAF7F2',
+    goldLight: '#D4B063',
+    champagne: '#E7D3A1',
+    goldDeep: '#7E5F22',
+    /** Warm near-black. A true #000 beside gold looks like a spreadsheet. */
+    ink: '#16130F',
+    inkSoft: '#3A342B',
+    muted: '#6B6154',
+    parchment: '#FAF8F4',
+    rule: '#E4DED2',
     fontDisplay: '"Cormorant Garamond", Georgia, serif',
     fontBody: '"Inter", system-ui, sans-serif',
   },

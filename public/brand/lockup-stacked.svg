@@ -1,0 +1,40 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 336 214" width="336" height="214" role="img" aria-label="Loupe — Look closer.">
+  <title>Loupe — Look closer.</title>
+  <defs>
+    <linearGradient id="lpe-gold" x1="14%" y1="6%" x2="86%" y2="94%">
+      <stop offset="0%"   stop-color="#F7E9C4"/>
+      <stop offset="26%"  stop-color="#D4B063"/>
+      <stop offset="58%"  stop-color="#A8802F"/>
+      <stop offset="100%" stop-color="#5E4415"/>
+    </linearGradient>
+    <style>
+      .lpe-letter {
+        font-family: 'Cormorant Garamond', Cormorant, Georgia, 'Times New Roman', serif;
+        font-size: 62px; font-weight: 300; fill: #16130F; letter-spacing: 0;
+      }
+      .lpe-tagline {
+        font-family: 'Inter', system-ui, -apple-system, 'Segoe UI', sans-serif;
+        font-size: 11px; font-weight: 400; letter-spacing: 0.44em; fill: #6B6154;
+      }
+    </style>
+  </defs>
+
+  <g transform="translate(129 4) scale(0.78)">
+    <circle cx="50" cy="50" r="44" fill="none" stroke="url(#lpe-gold)" stroke-width="4.5"/>
+    <circle cx="50" cy="50" r="33.5" fill="none" stroke="url(#lpe-gold)" stroke-width="1.5" opacity="0.62"/>
+  </g>
+
+  <!-- The lens is already the hero above; repeating it in the word would be a
+       stutter, so the wordmark here uses a true O. -->
+  <g transform="translate(0 96)">
+    <text class="lpe-letter" x="46"  y="66" text-anchor="middle">L</text>
+    <text class="lpe-letter" x="107" y="66" text-anchor="middle">O</text>
+    <text class="lpe-letter" x="168" y="66" text-anchor="middle">U</text>
+    <text class="lpe-letter" x="229" y="66" text-anchor="middle">P</text>
+    <text class="lpe-letter" x="290" y="66" text-anchor="middle">E</text>
+  </g>
+
+  <!-- Optically centred: trailing letter-space after the final E pulls the
+       block right, so the anchor sits left of true centre to compensate. -->
+  <text class="lpe-tagline" x="168" y="200" text-anchor="middle">LOOK CLOSER</text>
+</svg>

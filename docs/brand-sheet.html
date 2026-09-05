@@ -1,0 +1,612 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width,initial-scale=1" />
+    <title>Loupe — Brand</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@300;400;500&family=Inter:wght@300;400;500;600&display=swap"
+      rel="stylesheet"
+    />
+    <style>
+      :root {
+        --gold: #b08d3f;
+        --gold-light: #e7d3a1;
+        --gold-deep: #7e5f22;
+        --champagne: #f2e4be;
+        --ink: #16130f;
+        --ink-soft: #3a342b;
+        --muted: #6b6154;
+        --parchment: #faf8f4;
+        --rule: #e4ded2;
+        --card: #ffffff;
+        --serif: 'Cormorant Garamond', Georgia, serif;
+        --sans: 'Inter', system-ui, sans-serif;
+      }
+      * {
+        box-sizing: border-box;
+      }
+      body {
+        margin: 0;
+        background: var(--parchment);
+        color: var(--ink);
+        font-family: var(--sans);
+        font-size: 14px;
+        line-height: 1.6;
+        -webkit-font-smoothing: antialiased;
+      }
+      .wrap {
+        max-width: 1080px;
+        margin: 0 auto;
+        padding: 72px 40px 120px;
+      }
+      .eyebrow {
+        font-size: 10px;
+        letter-spacing: 0.34em;
+        text-transform: uppercase;
+        color: var(--muted);
+        margin: 0 0 10px;
+      }
+      h1 {
+        font-family: var(--serif);
+        font-weight: 300;
+        font-size: 52px;
+        line-height: 1.05;
+        margin: 0 0 8px;
+        letter-spacing: 0.01em;
+      }
+      h2 {
+        font-family: var(--serif);
+        font-weight: 400;
+        font-size: 26px;
+        margin: 0 0 4px;
+      }
+      .lede {
+        font-size: 15px;
+        color: var(--ink-soft);
+        max-width: 56ch;
+        margin: 0;
+      }
+      section {
+        margin-top: 76px;
+      }
+      .sec-head {
+        display: flex;
+        align-items: baseline;
+        gap: 14px;
+        border-bottom: 1px solid var(--rule);
+        padding-bottom: 12px;
+        margin-bottom: 28px;
+      }
+      .sec-num {
+        font-size: 10px;
+        letter-spacing: 0.28em;
+        color: var(--gold);
+        font-weight: 600;
+      }
+      .grid {
+        display: grid;
+        gap: 20px;
+      }
+      .g2 {
+        grid-template-columns: repeat(2, 1fr);
+      }
+      .g3 {
+        grid-template-columns: repeat(3, 1fr);
+      }
+      .g4 {
+        grid-template-columns: repeat(4, 1fr);
+      }
+      .card {
+        background: var(--card);
+        border: 1px solid var(--rule);
+        border-radius: 3px;
+        padding: 34px 28px;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        gap: 20px;
+        min-height: 180px;
+      }
+      .card.ink {
+        background: var(--ink);
+        border-color: var(--ink);
+      }
+      .cap {
+        font-size: 10px;
+        letter-spacing: 0.18em;
+        text-transform: uppercase;
+        color: var(--muted);
+        text-align: center;
+      }
+      .card.ink .cap {
+        color: #8c8375;
+      }
+      .note {
+        font-size: 13px;
+        color: var(--ink-soft);
+        max-width: 62ch;
+        margin: 0 0 22px;
+      }
+
+      /* palette */
+      .sw {
+        border: 1px solid var(--rule);
+        border-radius: 3px;
+        overflow: hidden;
+        background: var(--card);
+      }
+      .sw .chip {
+        height: 96px;
+      }
+      .sw .meta {
+        padding: 12px 14px;
+        border-top: 1px solid var(--rule);
+      }
+      .sw .nm {
+        font-size: 12px;
+        font-weight: 500;
+      }
+      .sw .hex {
+        font-size: 11px;
+        color: var(--muted);
+        font-variant-numeric: tabular-nums;
+        letter-spacing: 0.04em;
+      }
+      .sw .use {
+        font-size: 11px;
+        color: var(--muted);
+        margin-top: 5px;
+        line-height: 1.45;
+      }
+
+      /* type */
+      .type-row {
+        display: grid;
+        grid-template-columns: 130px 1fr;
+        gap: 28px;
+        padding: 18px 0;
+        border-bottom: 1px solid var(--rule);
+        align-items: baseline;
+      }
+      .type-row:last-child {
+        border-bottom: 0;
+      }
+      .type-spec {
+        font-size: 10px;
+        letter-spacing: 0.14em;
+        text-transform: uppercase;
+        color: var(--muted);
+        line-height: 1.7;
+      }
+
+      /* clear space */
+      .clearbox {
+        position: relative;
+        padding: 44px;
+        background: var(--card);
+        border: 1px solid var(--rule);
+        border-radius: 3px;
+      }
+      .clearbox .guide {
+        position: absolute;
+        inset: 44px;
+        border: 1px dashed var(--gold);
+        opacity: 0.5;
+      }
+
+      /* misuse */
+      .dont {
+        position: relative;
+      }
+      .dont::after {
+        content: '';
+        position: absolute;
+        inset: 0;
+        background: linear-gradient(
+          to top right,
+          transparent calc(50% - 0.5px),
+          #c0392b 50%,
+          transparent calc(50% + 0.5px)
+        );
+        opacity: 0.55;
+      }
+      .dont-cap {
+        color: #a5382c !important;
+      }
+
+      /* application */
+      .app-header {
+        background: var(--card);
+        border: 1px solid var(--rule);
+        border-radius: 3px;
+        overflow: hidden;
+      }
+      .app-bar {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        padding: 18px 26px;
+        border-bottom: 1px solid var(--rule);
+      }
+      .app-nav {
+        display: flex;
+        gap: 26px;
+        font-size: 11px;
+        letter-spacing: 0.16em;
+        text-transform: uppercase;
+        color: var(--ink-soft);
+      }
+      .app-body {
+        padding: 40px 26px;
+        display: grid;
+        grid-template-columns: 1.05fr 1fr;
+        gap: 32px;
+        align-items: center;
+      }
+      .app-body h3 {
+        font-family: var(--serif);
+        font-weight: 300;
+        font-size: 34px;
+        margin: 0 0 10px;
+        line-height: 1.15;
+      }
+      .price {
+        font-family: var(--serif);
+        font-size: 28px;
+        margin: 16px 0 4px;
+      }
+      .price small {
+        font-family: var(--sans);
+        font-size: 11px;
+        color: var(--muted);
+        letter-spacing: 0.1em;
+        display: block;
+        margin-top: 6px;
+      }
+      .breakdown {
+        margin-top: 18px;
+        border-top: 1px solid var(--rule);
+        font-size: 12px;
+      }
+      .breakdown div {
+        display: flex;
+        justify-content: space-between;
+        padding: 7px 0;
+        border-bottom: 1px solid var(--rule);
+        color: var(--ink-soft);
+      }
+      .breakdown div:last-child {
+        border-bottom: 0;
+        font-weight: 600;
+        color: var(--ink);
+      }
+      .breakdown .n {
+        font-variant-numeric: tabular-nums;
+      }
+      .swatchspot {
+        aspect-ratio: 1;
+        background: linear-gradient(145deg, #efe7d8, #d9c79c 55%, #bfa269);
+        border-radius: 2px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+      }
+      .btn {
+        display: inline-block;
+        margin-top: 20px;
+        padding: 11px 26px;
+        background: var(--ink);
+        color: var(--parchment);
+        font-size: 11px;
+        letter-spacing: 0.2em;
+        text-transform: uppercase;
+        border-radius: 2px;
+      }
+      .rationale {
+        background: var(--card);
+        border-left: 2px solid var(--gold);
+        padding: 22px 26px;
+        border-radius: 0 3px 3px 0;
+      }
+      .rationale p {
+        margin: 0 0 12px;
+      }
+      .rationale p:last-child {
+        margin: 0;
+      }
+      .rationale b {
+        font-weight: 600;
+      }
+    </style>
+  </head>
+  <body>
+    <div class="wrap">
+      <p class="eyebrow">Identity System</p>
+      <h1>Loupe</h1>
+      <p class="lede">
+        A jeweller's loupe is the one tool in the trade whose entire purpose is verification. You
+        hand someone a loupe when you have nothing to hide.
+      </p>
+
+      <section>
+        <div class="sec-head">
+          <span class="sec-num">01</span>
+          <h2>The mark</h2>
+        </div>
+        <div class="rationale" style="margin-bottom: 28px">
+          <p>
+            <b>One shape, three readings.</b> A lens. A ring. The letter O. It is not a logo placed
+            beside a name — it is a letter <i>in</i> the name, so the mark and the wordmark can
+            never drift apart.
+          </p>
+          <p>
+            <b>What makes it a lens and not a wedding band</b> is the second, lighter ring set
+            inboard of the bezel: glass sits recessed in its housing. The polish comes from the
+            bezel’s own gradient sweeping champagne to bronze around the circumference — contrast
+            internal to the shape, so it survives on parchment and on ink alike. A pale highlight
+            stroke was tried first and vanished on white.
+          </p>
+        </div>
+        <div class="g3 grid">
+          <div class="card">
+            <img src="../public/brand/mark.svg" width="104" alt="Loupe mark" /><span class="cap"
+              >Primary mark</span
+            >
+          </div>
+          <div class="card ink" style="color: var(--gold-light)">
+            <img
+              src="../public/brand/mark-mono.svg"
+              width="104"
+              alt="Loupe mark, single colour"
+              style="filter: sepia(1) saturate(1.8) brightness(1.35) hue-rotate(-2deg)"
+            /><span class="cap">Mono — foil, emboss, dark ground</span>
+          </div>
+          <div class="card">
+            <img src="../public/brand/icon.svg" width="72" alt="Loupe app icon" /><span class="cap"
+              >App icon · 16px-safe reduction</span
+            >
+          </div>
+        </div>
+      </section>
+
+      <section>
+        <div class="sec-head">
+          <span class="sec-num">02</span>
+          <h2>Lockups</h2>
+        </div>
+        <p class="note">
+          Horizontal for interface headers and email. Stacked for packaging, the certificate card,
+          and anywhere the piece is the hero.
+        </p>
+        <div class="g2 grid">
+          <div class="card">
+            <img src="../public/brand/wordmark.svg" width="290" alt="Loupe wordmark" /><span
+              class="cap"
+              >Horizontal · primary</span
+            >
+          </div>
+          <div class="card ink">
+            <img
+              src="../public/brand/wordmark-inverse.svg"
+              width="290"
+              alt="Loupe wordmark, inverse"
+            /><span class="cap">Horizontal · inverse</span>
+          </div>
+        </div>
+        <div class="g2 grid" style="margin-top: 20px">
+          <div class="card">
+            <img
+              src="../public/brand/lockup-stacked.svg"
+              width="230"
+              alt="Loupe stacked lockup"
+            /><span class="cap">Stacked with tagline</span>
+          </div>
+          <div class="clearbox">
+            <div class="guide"></div>
+            <div style="display: flex; flex-direction: column; align-items: center; gap: 18px">
+              <img
+                src="../public/brand/wordmark.svg"
+                width="240"
+                alt="Loupe wordmark with clear space"
+              />
+              <span class="cap">Clear space = the lens diameter, all four sides</span>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <section>
+        <div class="sec-head">
+          <span class="sec-num">03</span>
+          <h2>Palette</h2>
+        </div>
+        <p class="note">
+          Gold is a gradient, never a flat fill — flat gold reads as mustard. Ink is warm, not
+          black: a true #000 next to gold looks like a spreadsheet.
+        </p>
+        <div class="g4 grid">
+          <div class="sw">
+            <div
+              class="chip"
+              style="background: linear-gradient(145deg, #ebd8a8, #c7a253 45%, #7e5f22)"
+            ></div>
+            <div class="meta">
+              <div class="nm">Gold</div>
+              <div class="hex">#B08D3F · gradient #EBD8A8 → #7E5F22</div>
+              <div class="use">The mark, rules, prices, active states.</div>
+            </div>
+          </div>
+          <div class="sw">
+            <div class="chip" style="background: #e7d3a1"></div>
+            <div class="meta">
+              <div class="nm">Champagne</div>
+              <div class="hex">#E7D3A1</div>
+              <div class="use">Light catch, hover fills, dark-ground text.</div>
+            </div>
+          </div>
+          <div class="sw">
+            <div class="chip" style="background: #16130f"></div>
+            <div class="meta">
+              <div class="nm">Ink</div>
+              <div class="hex">#16130F</div>
+              <div class="use">Body copy, buttons, inverse grounds.</div>
+            </div>
+          </div>
+          <div class="sw">
+            <div
+              class="chip"
+              style="background: #faf8f4; box-shadow: inset 0 0 0 1px #e4ded2"
+            ></div>
+            <div class="meta">
+              <div class="nm">Parchment</div>
+              <div class="hex">#FAF8F4</div>
+              <div class="use">Page ground. Never pure white.</div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <section>
+        <div class="sec-head">
+          <span class="sec-num">04</span>
+          <h2>Typography</h2>
+        </div>
+        <p class="note">
+          Cormorant Garamond for anything the customer feels; Inter for anything they have to read
+          precisely. Weights and prices are always tabular — figures must align down a column.
+        </p>
+        <div>
+          <div class="type-row">
+            <div class="type-spec">Cormorant Garamond<br />Light 300 · 52px</div>
+            <div
+              style="font-family: var(--serif); font-weight: 300; font-size: 52px; line-height: 1.1"
+            >
+              Kundan Temple Choker
+            </div>
+          </div>
+          <div class="type-row">
+            <div class="type-spec">Cormorant Garamond<br />Light 300 · 28px</div>
+            <div style="font-family: var(--serif); font-weight: 300; font-size: 28px">
+              ₹1,04,857
+              <span
+                style="
+                  font-family: var(--sans);
+                  font-size: 11px;
+                  color: var(--muted);
+                  letter-spacing: 0.1em;
+                "
+                >· 18.400 g · 22K</span
+              >
+            </div>
+          </div>
+          <div class="type-row">
+            <div class="type-spec">Inter · 500<br />11px · 0.2em</div>
+            <div
+              style="
+                font-size: 11px;
+                font-weight: 500;
+                letter-spacing: 0.2em;
+                text-transform: uppercase;
+              "
+            >
+              Add to wishlist
+            </div>
+          </div>
+          <div class="type-row">
+            <div class="type-spec">Inter · 400<br />14px / 1.65</div>
+            <div style="max-width: 56ch; color: var(--ink-soft)">
+              Hand-set in 22K, hallmarked to BIS 916. Priced against today's rate — net metal
+              weight, making charge and GST shown separately, every time.
+            </div>
+          </div>
+          <div class="type-row">
+            <div class="type-spec">Inter · Tabular<br />13px</div>
+            <div style="font-variant-numeric: tabular-nums; font-size: 13px; line-height: 1.9">
+              18.400 g<br />10,485,735 paise<br />₹7,412.50 / g
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <section>
+        <div class="sec-head">
+          <span class="sec-num">05</span>
+          <h2>In use</h2>
+        </div>
+        <div class="app-header">
+          <div class="app-bar">
+            <img src="../public/brand/wordmark.svg" width="118" alt="Loupe" />
+            <div class="app-nav">
+              <span>Necklaces</span><span>Bridal</span><span>Festive</span><span>Rate Today</span>
+            </div>
+          </div>
+          <div class="app-body">
+            <div class="swatchspot">
+              <img src="../public/brand/mark-mono.svg" width="88" style="opacity: 0.16" alt="" />
+            </div>
+            <div>
+              <p class="eyebrow" style="margin-bottom: 6px">BIS 916 · Hallmarked</p>
+              <h3>Kundan Temple Choker</h3>
+              <div class="price">₹1,04,857<small>at today's rate · ₹7,412.50/g · 22K</small></div>
+              <div class="breakdown">
+                <div><span>Metal — 18.400 g @ ₹7,412.50</span><span class="n">₹1,36,390</span></div>
+                <div><span>Making charge — 12%</span><span class="n">₹16,367</span></div>
+                <div><span>GST @ 3%</span><span class="n">₹4,583</span></div>
+                <div><span>Total</span><span class="n">₹1,57,340</span></div>
+              </div>
+              <span class="btn">Reserve this piece</span>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <section>
+        <div class="sec-head">
+          <span class="sec-num">06</span>
+          <h2>Never</h2>
+        </div>
+        <div class="g4 grid">
+          <div class="card dont">
+            <img
+              src="../public/brand/mark.svg"
+              width="86"
+              style="transform: scaleX(1.5)"
+              alt=""
+            /><span class="cap dont-cap">Stretch the lens</span>
+          </div>
+          <div class="card dont" style="background: #1e6f4c">
+            <img src="../public/brand/mark-mono.svg" width="86" alt="" /><span class="cap dont-cap"
+              >Recolour off-palette</span
+            >
+          </div>
+          <div class="card dont">
+            <img
+              src="../public/brand/mark.svg"
+              width="86"
+              style="filter: drop-shadow(3px 5px 4px rgba(0, 0, 0, 0.55))"
+              alt=""
+            /><span class="cap dont-cap">Add shadow or bevel</span>
+          </div>
+          <div class="card dont">
+            <div style="display: flex; align-items: center; gap: 6px">
+              <img src="../public/brand/mark.svg" width="52" alt="" /><span
+                style="
+                  font-family: var(--sans);
+                  font-weight: 700;
+                  font-size: 24px;
+                  letter-spacing: -0.02em;
+                "
+                >Loupe</span
+              >
+            </div>
+            <span class="cap dont-cap">Reset the wordmark</span>
+          </div>
+        </div>
+      </section>
+    </div>
+  </body>
+</html>

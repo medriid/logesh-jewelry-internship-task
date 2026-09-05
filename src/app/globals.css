@@ -1,0 +1,50 @@
+@import 'tailwindcss';
+
+/**
+ * Loupe design tokens.
+ *
+ * These mirror `brand.theme` in src/config/brand.ts — that file is the source of
+ * truth for anything the server renders or the API returns; this is the same
+ * palette expressed for CSS. Change both, or change neither.
+ */
+@theme {
+  /* Gold is a gradient, never a flat fill — flat gold reads as mustard. */
+  --color-gold: #b08d3f;
+  --color-gold-light: #d4b063;
+  --color-champagne: #e7d3a1;
+  --color-gold-deep: #7e5f22;
+
+  /* Ink is warm, not black. A true #000 beside gold looks like a spreadsheet. */
+  --color-ink: #16130f;
+  --color-ink-soft: #3a342b;
+  --color-muted: #6b6154;
+
+  --color-parchment: #faf8f4;
+  --color-rule: #e4ded2;
+  --color-surface: #ffffff;
+
+  --font-display: 'Cormorant Garamond', Georgia, serif;
+  --font-body: 'Inter', system-ui, -apple-system, sans-serif;
+}
+
+:root {
+  --gold-sweep: linear-gradient(135deg, #f7e9c4 0%, #d4b063 26%, #a8802f 58%, #5e4415 100%);
+}
+
+html {
+  color-scheme: light;
+}
+
+body {
+  background: var(--color-parchment);
+  color: var(--color-ink);
+  font-family: var(--font-body);
+  -webkit-font-smoothing: antialiased;
+}
+
+/* Weights, karats and prices must align down a column — a catalog where
+   ₹1,04,857 and ₹98,200 don't line up looks careless about numbers, which is
+   the last thing a jeweller can afford to look. */
+.tabular {
+  font-variant-numeric: tabular-nums;
+}
