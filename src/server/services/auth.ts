@@ -1,6 +1,6 @@
 import 'server-only';
 
-import { eq, sql } from 'drizzle-orm';
+import { and, eq, isNull, lte, or, sql } from 'drizzle-orm';
 
 import { db } from '@/db';
 import { adminUsers } from '@/db/schema';
@@ -60,7 +60,7 @@ export async function login(
   const { valid, needsRehash } = await verifyPassword(input.password, user.passwordHash);
 
   if (!valid) {
-    await recordFailure(user.id, user.failedLoginAttempts + 1);
+    await recordFailure(user.id);
     return { ok: false, reason: 'INVALID_CREDENTIALS' };
   }
 
@@ -68,7 +68,7 @@ export async function login(
   if (user.status !== 'ACTIVE') return { ok: false, reason: 'INVALID_CREDENTIALS' };
 
   const session = await db.transaction(async (tx) => {
-    await tx
+    const [updated] = await tx
       .update(adminUsers)
       .set({
         failedLoginAttempts: 0,
@@ -78,7 +78,18 @@ export async function login(
         // hash was made. The user notices nothing.
         ...(needsRehash && { passwordHash: await hashPassword(input.password) }),
       })
-      .where(eq(adminUsers.id, user.id));
+      .where(
+        and(
+          eq(adminUsers.id, user.id),
+          eq(adminUsers.status, 'ACTIVE'),
+          eq(adminUsers.passwordHash, user.passwordHash),
+          or(isNull(adminUsers.lockedUntil), lte(adminUsers.lockedUntil, new Date())),
+        ),
+      )
+      .returning({ id: adminUsers.id });
+
+    // Credentials or account state may have changed during password verification.
+    if (!updated) return null;
 
     await writeAudit(
       tx,
@@ -90,6 +101,8 @@ export async function login(
     // `tx`, not `db` — see the note on createSession.
     return createSession(user.id, { ip: ctx.ip, userAgent: ctx.userAgent }, tx);
   });
+
+  if (!session) return { ok: false, reason: 'INVALID_CREDENTIALS' };
 
   return {
     ok: true,
@@ -107,15 +120,20 @@ export async function login(
  * here: the realistic attack on a known admin address is a botnet rotating
  * addresses, where every request looks like a first attempt from a new client.
  */
-async function recordFailure(userId: string, attempts: number): Promise<void> {
-  const shouldLock = attempts >= MAX_ATTEMPTS;
-  const backoff = Math.min(LOCKOUT_BASE_MS * 2 ** (attempts - MAX_ATTEMPTS), LOCKOUT_MAX_MS);
-
+async function recordFailure(userId: string): Promise<void> {
+  // Increment and calculate the deadline from the stored counter in one update.
+  // Concurrent password checks must not overwrite each other's failures.
+  const attempts = sql`${adminUsers.failedLoginAttempts} + 1`;
   await db
     .update(adminUsers)
     .set({
       failedLoginAttempts: attempts,
-      ...(shouldLock && { lockedUntil: new Date(Date.now() + backoff) }),
+      lockedUntil: sql`CASE WHEN ${attempts} >= ${MAX_ATTEMPTS}
+        THEN clock_timestamp() + LEAST(
+          ${LOCKOUT_MAX_MS}::double precision,
+          ${LOCKOUT_BASE_MS}::double precision * power(2, LEAST(${attempts} - ${MAX_ATTEMPTS}, 6))
+        ) * interval '1 millisecond'
+        ELSE ${adminUsers.lockedUntil} END`,
     })
     .where(eq(adminUsers.id, userId));
 }

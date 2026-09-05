@@ -1,6 +1,7 @@
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 import { eq } from 'drizzle-orm';
 
+import { env } from '../../src/config/env';
 import { db, closeDb } from '../../src/db';
 import { adminUsers, sessions } from '../../src/db/schema';
 import { hashPassword } from '../../src/lib/auth/password';
@@ -35,6 +36,19 @@ beforeAll(async () => {
 afterAll(async () => closeDb());
 
 describe('session issuance', () => {
+  it('caps the initial cookie and idle deadline at absolute expiry', async () => {
+    const original = env.SESSION_ABSOLUTE_TTL_SECONDS;
+    env.SESSION_ABSOLUTE_TTL_SECONDS = 60;
+    try {
+      const issued = await createSession(userId);
+      const session = await validateSession(issued.token);
+      expect(issued.expiresAt).toEqual(session!.absoluteExpiresAt);
+      expect(issued.cookie.expires).toEqual(session!.absoluteExpiresAt);
+    } finally {
+      env.SESSION_ABSOLUTE_TTL_SECONDS = original;
+    }
+  });
+
   it('never stores the token — only its digest', async () => {
     const { token } = await createSession(userId);
 
@@ -174,5 +188,39 @@ describe('revocation and cleanup', () => {
 
     expect(await pruneExpiredSessions()).toBeGreaterThanOrEqual(1);
     await expect(validateSession(token)).resolves.not.toBeNull();
+  });
+});
+
+describe('expired session hygiene', () => {
+  it('excludes idle-expired and absolute-expired sessions from the active list', async () => {
+    await revokeAllSessionsForUser(userId);
+    const idle = await createSession(userId);
+    const absolute = await createSession(userId);
+    const live = await createSession(userId);
+    const past = new Date(Date.now() - 1_000);
+    await db
+      .update(sessions)
+      .set({ expiresAt: past })
+      .where(eq(sessions.id, hashToken(idle.token)));
+    await db
+      .update(sessions)
+      .set({ absoluteExpiresAt: past })
+      .where(eq(sessions.id, hashToken(absolute.token)));
+    expect((await listSessionsForUser(userId)).map((s) => s.id)).toEqual([hashToken(live.token)]);
+  });
+
+  it('prunes sessions whose idle deadline expired over a week ago', async () => {
+    const stale = await createSession(userId);
+    await db
+      .update(sessions)
+      .set({ expiresAt: new Date(Date.now() - 8 * 24 * 60 * 60 * 1000) })
+      .where(eq(sessions.id, hashToken(stale.token)));
+    await pruneExpiredSessions();
+    expect(
+      await db
+        .select()
+        .from(sessions)
+        .where(eq(sessions.id, hashToken(stale.token))),
+    ).toHaveLength(0);
   });
 });

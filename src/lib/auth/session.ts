@@ -1,6 +1,6 @@
 import 'server-only';
 
-import { and, eq, isNull, lt, or, sql } from 'drizzle-orm';
+import { and, eq, gt, gte, isNull, lt, or, sql } from 'drizzle-orm';
 
 import { env, isProduction } from '@/config/env';
 import { db, type Database } from '@/db';
@@ -59,7 +59,7 @@ export type CookieAttributes = {
  * valid session. Lax keeps top-level GET navigations working while still
  * blocking cross-site POSTs, and the CSRF token covers what remains.
  */
-function cookieAttributes(value: string, expires: Date): CookieAttributes {
+export function cookieAttributes(value: string, expires: Date): CookieAttributes {
   return {
     name: SESSION_COOKIE,
     value,
@@ -89,7 +89,9 @@ export async function createSession(
   const token = generateToken();
   const now = Date.now();
 
-  const expiresAt = new Date(now + env.SESSION_IDLE_TTL_SECONDS * 1000);
+  const expiresAt = new Date(
+    now + Math.min(env.SESSION_IDLE_TTL_SECONDS, env.SESSION_ABSOLUTE_TTL_SECONDS) * 1000,
+  );
   // Fixed at login and never extended. A stolen cookie cannot be kept alive
   // indefinitely just by using it.
   const absoluteExpiresAt = new Date(now + env.SESSION_ABSOLUTE_TTL_SECONDS * 1000);
@@ -149,11 +151,11 @@ export async function validateSession(token: string | undefined): Promise<Active
   // revoke each one.
   if (row.createdAt < row.passwordChangedAt) return null;
 
-  await slideExpiry(row.id, row.absoluteExpiresAt, now);
+  const expiresAt = await slideExpiry(row.id, row.expiresAt, row.absoluteExpiresAt, now);
 
   return {
     id: row.id,
-    expiresAt: row.expiresAt,
+    expiresAt,
     absoluteExpiresAt: row.absoluteExpiresAt,
     user: { id: row.userId, email: row.email, name: row.name, role: row.role },
   };
@@ -166,17 +168,29 @@ export async function validateSession(token: string | undefined): Promise<Active
  * request in a busy admin session becomes a write, turning a read-mostly table
  * into a write-hot one for no benefit.
  */
-async function slideExpiry(sessionId: string, absolute: Date, now: Date): Promise<void> {
+async function slideExpiry(
+  sessionId: string,
+  current: Date,
+  absolute: Date,
+  now: Date,
+): Promise<Date> {
   const target = new Date(
     Math.min(now.getTime() + env.SESSION_IDLE_TTL_SECONDS * 1000, absolute.getTime()),
   );
 
-  await db
+  const [updated] = await db
     .update(sessions)
     .set({ expiresAt: target, lastUsedAt: now })
     .where(
-      and(eq(sessions.id, sessionId), lt(sessions.expiresAt, new Date(target.getTime() - 60_000))),
-    );
+      and(
+        eq(sessions.id, sessionId),
+        isNull(sessions.revokedAt),
+        gt(sessions.expiresAt, now),
+        lt(sessions.expiresAt, new Date(target.getTime() - 60_000)),
+      ),
+    )
+    .returning({ expiresAt: sessions.expiresAt });
+  return updated?.expiresAt ?? current;
 }
 
 export async function revokeSession(sessionId: string): Promise<void> {
@@ -207,7 +221,13 @@ export async function pruneExpiredSessions(): Promise<number> {
   const cutoff = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000);
   const deleted = await db
     .delete(sessions)
-    .where(or(lt(sessions.absoluteExpiresAt, cutoff), lt(sessions.revokedAt, cutoff)))
+    .where(
+      or(
+        lt(sessions.expiresAt, cutoff),
+        lt(sessions.absoluteExpiresAt, cutoff),
+        lt(sessions.revokedAt, cutoff),
+      ),
+    )
     .returning({ id: sessions.id });
   return deleted.length;
 }
@@ -223,6 +243,16 @@ export async function listSessionsForUser(userId: string) {
       expiresAt: sessions.expiresAt,
     })
     .from(sessions)
-    .where(and(eq(sessions.userId, userId), isNull(sessions.revokedAt)))
+    .innerJoin(adminUsers, eq(sessions.userId, adminUsers.id))
+    .where(
+      and(
+        eq(sessions.userId, userId),
+        isNull(sessions.revokedAt),
+        gt(sessions.expiresAt, new Date()),
+        gt(sessions.absoluteExpiresAt, new Date()),
+        eq(adminUsers.status, 'ACTIVE'),
+        gte(sessions.createdAt, adminUsers.passwordChangedAt),
+      ),
+    )
     .orderBy(sql`${sessions.lastUsedAt} DESC`);
 }

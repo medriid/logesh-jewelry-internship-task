@@ -1,5 +1,8 @@
 import { sql } from 'drizzle-orm';
 
+import journal from '../../../../../drizzle/meta/_journal.json';
+import { defineRoute } from '@/lib/http/handler';
+
 import { env, isProduction } from '@/config/env';
 import { db } from '@/db';
 import { ok } from '@/lib/http/responses';
@@ -60,7 +63,10 @@ export async function GET() {
       latest: string | number;
     }[];
     const row = rows[0];
-    if (!row || row.applied === 0) throw new Error('no migrations applied');
+    const latestExpected = Math.max(...journal.entries.map((entry) => entry.when));
+    if (!row || row.applied < journal.entries.length || Number(row.latest) < latestExpected) {
+      throw new Error('pending migrations');
+    }
     return `${row.applied} applied`;
   });
 
@@ -89,3 +95,9 @@ export async function GET() {
 
   return ok(body);
 }
+
+// Explicit export routes preflight through the shared CORS policy.
+export const OPTIONS = defineRoute(
+  { auth: 'public' },
+  async () => new Response(null, { status: 204 }),
+);

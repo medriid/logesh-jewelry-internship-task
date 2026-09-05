@@ -5,8 +5,14 @@ import type { ZodType } from 'zod';
 import { validateApiKey, type ApiKeyIdentity } from '@/lib/auth/api-key';
 import { CSRF_HEADER, isSafeMethod, verifyCsrfToken } from '@/lib/auth/csrf';
 import { can, scopesAllow, type Permission } from '@/lib/auth/permissions';
-import { SESSION_COOKIE, validateSession, type ActiveSession } from '@/lib/auth/session';
+import {
+  SESSION_COOKIE,
+  cookieAttributes,
+  validateSession,
+  type ActiveSession,
+} from '@/lib/auth/session';
 import { limiterFor, type LimitClass } from '@/lib/ratelimit';
+import { serializeCookie } from './cookies';
 import { buildContext, type RequestContext } from './context';
 import { corsHeaders, isAllowedOrigin, preflightHeaders } from './cors';
 import { internalErrorResponse, problem, problemResponse, type FieldError } from './problem';
@@ -45,7 +51,7 @@ export type RouteConfig<TBody, TQuery> = {
   limit?: LimitClass;
   body?: ZodType<TBody>;
   query?: ZodType<TQuery>;
-  /** Parsed before the body is read, so an oversized payload never buffers. */
+  /** Enforced against both declared length and actual streamed bytes. */
   maxBodyBytes?: number;
 };
 
@@ -62,7 +68,10 @@ export function defineRoute<TBody = undefined, TQuery = undefined, TParams = obj
 
     try {
       if (ctx.method === 'OPTIONS') {
-        return new Response(null, { status: 204, headers: preflightHeaders(ctx.origin) });
+        return finish(
+          new Response(null, { status: 204, headers: preflightHeaders(ctx.origin) }),
+          ctx,
+        );
       }
 
       // A cross-origin write from an origin we do not trust is rejected before
@@ -118,6 +127,19 @@ export function defineRoute<TBody = undefined, TQuery = undefined, TParams = obj
         params,
       });
 
+      // Renew the browser deadline as well as the database deadline. Preserve
+      // explicit login/logout cookies, especially the logout deletion cookie.
+      if (
+        actor.kind === 'ADMIN' &&
+        !response.headers.getSetCookie().some((cookie) => cookie.startsWith(`${SESSION_COOKIE}=`))
+      ) {
+        const token = readCookie(request.headers.get('cookie'), SESSION_COOKIE);
+        if (token)
+          response.headers.append(
+            'Set-Cookie',
+            serializeCookie(cookieAttributes(token, actor.session.expiresAt)),
+          );
+      }
       return finish(response, ctx);
     } catch (error: unknown) {
       // The only place an unexpected throw is turned into a response. The
@@ -161,8 +183,11 @@ async function authenticate(request: Request): Promise<Actor> {
   // A bearer key wins if present, so a browser session cannot be accidentally
   // combined with a key to widen scope.
   const authorization = request.headers.get('authorization');
-  if (authorization?.startsWith('Bearer ')) {
-    const key = await validateApiKey(authorization.slice(7).trim());
+  if (authorization !== null) {
+    // Authorization takes precedence even when malformed; never fall back to
+    // an ambient browser session. HTTP auth scheme names are case-insensitive.
+    const bearer = /^Bearer[ \t]+([^ \t]+)[ \t]*$/i.exec(authorization);
+    const key = bearer ? await validateApiKey(bearer[1] ?? null) : null;
     return key ? { kind: 'API_KEY', key } : { kind: 'ANONYMOUS' };
   }
 
@@ -234,7 +259,7 @@ async function parseBody<TBody, TQuery>(
   if (!config.body) return { value: undefined as TBody };
 
   const contentType = request.headers.get('content-type') ?? '';
-  if (!contentType.includes('application/json')) {
+  if (contentType.split(';')[0]?.trim().toLowerCase() !== 'application/json') {
     return {
       response: problemResponse(
         problem('unsupported-media-type', {
@@ -245,7 +270,7 @@ async function parseBody<TBody, TQuery>(
     };
   }
 
-  // Checked before reading, so an oversized body is refused rather than buffered.
+  // Declared length is only an early rejection; chunked clients can omit it.
   const declared = Number(request.headers.get('content-length') ?? '0');
   const max = config.maxBodyBytes ?? DEFAULT_MAX_BODY_BYTES;
   if (declared > max) {
@@ -261,7 +286,40 @@ async function parseBody<TBody, TQuery>(
 
   let raw: unknown;
   try {
-    raw = await request.json();
+    const reader = request.body?.getReader();
+    const chunks: Uint8Array[] = [];
+    let size = 0;
+    if (reader) {
+      try {
+        while (true) {
+          const { done, value } = await reader.read();
+          if (done) break;
+          size += value.byteLength;
+          if (size > max) {
+            // Do not await cancellation: a remote sender may never finish it.
+            void reader.cancel().catch(() => {});
+            return {
+              response: problemResponse(
+                problem('payload-too-large', {
+                  requestId: ctx.requestId,
+                  detail: `Body exceeds ${max} bytes.`,
+                }),
+              ),
+            };
+          }
+          chunks.push(value);
+        }
+      } finally {
+        reader.releaseLock();
+      }
+    }
+    const bytes = new Uint8Array(size);
+    let offset = 0;
+    for (const chunk of chunks) {
+      bytes.set(chunk, offset);
+      offset += chunk.byteLength;
+    }
+    raw = JSON.parse(new TextDecoder().decode(bytes));
   } catch {
     return {
       response: validationProblem([{ path: [], message: 'Body is not valid JSON' }], ctx, 'body'),
@@ -295,7 +353,15 @@ function validationProblem(
 function finish(response: Response, ctx: RequestContext): Response {
   const headers = new Headers(response.headers);
   headers.set('X-Request-Id', ctx.requestId);
-  for (const [key, value] of Object.entries(corsHeaders(ctx.origin))) headers.set(key, value);
+  // Vary on Origin even for requests with no Origin or an untrusted one.
+  // Otherwise a CDN can reuse that representation for an allowed origin.
+  const vary = headers.get('Vary');
+  if (vary !== '*' && !vary?.split(',').some((name) => name.trim().toLowerCase() === 'origin')) {
+    headers.set('Vary', vary ? `${vary}, Origin` : 'Origin');
+  }
+  for (const [key, value] of Object.entries(corsHeaders(ctx.origin))) {
+    if (key.toLowerCase() !== 'vary') headers.set(key, value);
+  }
   return new Response(response.body, {
     status: response.status,
     statusText: response.statusText,
@@ -309,7 +375,11 @@ export function readCookie(header: string | null, name: string): string | undefi
     const index = part.indexOf('=');
     if (index === -1) continue;
     if (part.slice(0, index).trim() === name) {
-      return decodeURIComponent(part.slice(index + 1).trim());
+      try {
+        return decodeURIComponent(part.slice(index + 1).trim());
+      } catch {
+        return undefined;
+      }
     }
   }
   return undefined;

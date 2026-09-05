@@ -1,6 +1,7 @@
 import { csrfCookieAttributes, issueCsrfToken } from '@/lib/auth/csrf';
-import { clearedCookie, type CookieAttributes } from '@/lib/auth/session';
+import { clearedCookie } from '@/lib/auth/session';
 import { permissionsFor } from '@/lib/auth/permissions';
+import { serializeCookie } from '@/lib/http/cookies';
 import { defineRoute } from '@/lib/http/handler';
 import { problem, problemResponse } from '@/lib/http/problem';
 import { ok } from '@/lib/http/responses';
@@ -11,15 +12,6 @@ import { isProduction } from '@/config/env';
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
-
-/** Serialise cookie attributes into a Set-Cookie value. */
-function setCookie(c: CookieAttributes | ReturnType<typeof csrfCookieAttributes>): string {
-  const parts = [`${c.name}=${encodeURIComponent(c.value)}`, `Path=${c.path}`, `SameSite=Lax`];
-  if (c.httpOnly) parts.push('HttpOnly');
-  if (c.secure) parts.push('Secure');
-  if ('expires' in c && c.expires) parts.push(`Expires=${c.expires.toUTCString()}`);
-  return parts.join('; ');
-}
 
 export const POST = defineRoute(
   {
@@ -42,7 +34,7 @@ export const POST = defineRoute(
           detail: 'Invalid email or password.',
         }),
         // Clear any stale cookie so a failed login cannot leave a half-state.
-        { 'Set-Cookie': setCookie(clearedCookie()) },
+        { 'Set-Cookie': serializeCookie(clearedCookie()) },
       );
     }
 
@@ -52,8 +44,8 @@ export const POST = defineRoute(
     const csrfToken = issueCsrfToken(hashToken(session.token));
 
     const headers = new Headers();
-    headers.append('Set-Cookie', setCookie(session.cookie));
-    headers.append('Set-Cookie', setCookie(csrfCookieAttributes(csrfToken, isProduction)));
+    headers.append('Set-Cookie', serializeCookie(session.cookie));
+    headers.append('Set-Cookie', serializeCookie(csrfCookieAttributes(csrfToken, isProduction)));
 
     return ok(
       {
@@ -67,4 +59,10 @@ export const POST = defineRoute(
       headers,
     );
   },
+);
+
+// Explicit export routes preflight through the shared CORS policy.
+export const OPTIONS = defineRoute(
+  { auth: 'public' },
+  async () => new Response(null, { status: 204 }),
 );

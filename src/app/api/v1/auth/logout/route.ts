@@ -17,3 +17,9 @@ export const POST = defineRoute({ auth: 'session', limit: 'auth' }, async ({ act
     'Set-Cookie': `${c.name}=; Path=/; SameSite=Lax; HttpOnly${c.secure ? '; Secure' : ''}; Expires=${new Date(0).toUTCString()}`,
   });
 });
+
+// Explicit export routes preflight through the shared CORS policy.
+export const OPTIONS = defineRoute(
+  { auth: 'public' },
+  async () => new Response(null, { status: 204 }),
+);

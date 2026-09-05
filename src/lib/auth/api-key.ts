@@ -81,9 +81,8 @@ export async function validateApiKey(key: string | null): Promise<ApiKeyIdentity
   // Compare the hash of the whole key, not just the looked-up prefix.
   if (row.keyHash !== hashToken(key)) return null;
 
-  // Fire-and-forget: last-used is useful for finding dead keys to retire, and
-  // is not worth adding a write to the latency of every request.
-  void db.update(apiKeys).set({ lastUsedAt: now }).where(eq(apiKeys.id, row.id));
+  // Drizzle builders are lazy: without awaiting, this update never executes.
+  await db.update(apiKeys).set({ lastUsedAt: now }).where(eq(apiKeys.id, row.id));
 
   return { id: row.id, name: row.name, scopes: row.scopes };
 }

@@ -1,8 +1,9 @@
-import { afterAll, beforeAll, beforeEach, describe, expect, it } from 'vitest';
+import { afterAll, beforeAll, beforeEach, describe, expect, it, vi } from 'vitest';
 import { eq, sql } from 'drizzle-orm';
 
 import { closeDb, db } from '../../src/db';
 import { adminUsers, auditLogs, sessions } from '../../src/db/schema';
+import * as passwords from '../../src/lib/auth/password';
 import { hashPassword } from '../../src/lib/auth/password';
 import { validateSession } from '../../src/lib/auth/session';
 import { login } from '../../src/server/services/auth';
@@ -115,6 +116,17 @@ describe('login failures are indistinguishable', () => {
 });
 
 describe('account lockout', () => {
+  it('counts concurrent failures without losing updates', async () => {
+    await Promise.all(
+      Array.from({ length: 5 }, () =>
+        login({ email: 'owner@loupe.jewelry', password: 'wrong' }, CTX),
+      ),
+    );
+    const [user] = await db.select().from(adminUsers).where(eq(adminUsers.id, userId));
+    expect(user?.failedLoginAttempts).toBe(5);
+    expect(user?.lockedUntil?.getTime()).toBeGreaterThan(Date.now());
+  });
+
   it('locks the account after five failures and rejects the correct password', async () => {
     for (let i = 0; i < 5; i += 1) {
       await login({ email: 'owner@loupe.jewelry', password: 'wrong' }, CTX);
@@ -150,5 +162,35 @@ describe('session hygiene', () => {
     const raw = result.value.session.token;
     expect(rows.some((r) => JSON.stringify(r).includes(raw))).toBe(false);
     expect(await db.select({ n: sql<number>`count(*)::int` }).from(sessions)).toBeDefined();
+  });
+});
+
+describe('account changes during password verification', () => {
+  it.each([
+    ['suspension', { status: 'SUSPENDED' as const }],
+    ['password change', { passwordHash: 'changed-while-verifying' }],
+    ['lockout', { lockedUntil: new Date(Date.now() + 60_000) }],
+  ])('rejects a login after %s', async (_label, change) => {
+    const [originalUser] = await db.select().from(adminUsers).where(eq(adminUsers.id, userId));
+    const originalVerify = passwords.verifyPassword;
+    const spy = vi.spyOn(passwords, 'verifyPassword').mockImplementationOnce(async (...args) => {
+      const verified = await originalVerify(...args);
+      await db.update(adminUsers).set(change).where(eq(adminUsers.id, userId));
+      return verified;
+    });
+    const before = await db.select({ id: sessions.id }).from(sessions);
+    try {
+      expect(await login({ email: 'owner@loupe.jewelry', password: PASSWORD }, CTX)).toEqual({
+        ok: false,
+        reason: 'INVALID_CREDENTIALS',
+      });
+      expect(await db.select({ id: sessions.id }).from(sessions)).toHaveLength(before.length);
+    } finally {
+      spy.mockRestore();
+      await db
+        .update(adminUsers)
+        .set({ passwordHash: originalUser!.passwordHash })
+        .where(eq(adminUsers.id, userId));
+    }
   });
 });

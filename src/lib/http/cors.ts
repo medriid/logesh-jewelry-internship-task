@@ -29,7 +29,8 @@ export function preflightHeaders(origin: string | null): Record<string, string> 
   return {
     ...corsHeaders(origin),
     'Access-Control-Allow-Methods': 'GET, POST, PATCH, DELETE, OPTIONS',
-    'Access-Control-Allow-Headers': 'Content-Type, X-CSRF-Token, Idempotency-Key, If-Match',
+    'Access-Control-Allow-Headers':
+      'Content-Type, Authorization, X-CSRF-Token, Idempotency-Key, If-Match',
     'Access-Control-Max-Age': '600',
   };
 }

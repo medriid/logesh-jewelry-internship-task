@@ -25,6 +25,10 @@ npm run verify        # typecheck + lint + tests
 
 ## API
 
+The table below is the target API. Authentication (`/auth/login`, `/auth/logout`,
+`/auth/session`) and `/health` are implemented; catalog, search, stock and
+metal-rate routes are still planned.
+
 `/api/v1` · errors are [RFC 9457](https://www.rfc-editor.org/rfc/rfc9457)
 problem documents · money is always integer **paise**.
 
@@ -56,6 +60,12 @@ Next.js 16 · TypeScript (strict) · Drizzle · Postgres · Zod · Vitest
 
 ## Status
 
-Schema, migrations and constraints are done — 14 tables, 18 CHECK constraints,
-11 integration tests passing against real Postgres. Pricing engine, auth, route
-handlers and UI are in progress.
+Schema, migrations, the pure pricing engine, authentication and health routes are
+implemented. Authentication includes server-side session renewal, CSRF protection,
+rate limiting and atomic account lockout. Health checks detect missing migrations.
+Regression tests cover streamed request limits, browser session cookies, CORS,
+concurrent login failures and account changes during login.
+
+Catalog CRUD, search, inventory and metal-rate endpoints, API reference, storefront
+and admin UI remain to be built. The Run section's UI URLs describe those planned
+screens; only the implemented API routes are currently available.

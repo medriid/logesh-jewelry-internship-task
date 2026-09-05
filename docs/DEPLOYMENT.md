@@ -37,6 +37,13 @@ UPSTASH_REDIS_REST_TOKEN=…
 LOG_LEVEL=info
 ```
 
+Blank optional settings (Argon2 costs, session lifetimes, logging and seed
+credentials) are treated as unset and use defaults where defined. You can delete
+these unused entries from Vercel. `APP_SECRET` has no default: generate a value
+with `openssl rand -base64 48` and enter it directly in Vercel, never in Git.
+Set required values for every environment you deploy to (Production and, if
+used, Preview). Redeploy after saving changes.
+
 `env.ts` enforces on boot that production uses `https`, real Postgres, and a
 shared rate-limit store. A misconfigured deploy fails loudly at startup instead
 of running in a degraded state.
@@ -57,8 +64,15 @@ Change the seeded password immediately after first login.
 vercel --prod
 ```
 
-Build command is the default `npm run build`. No `postinstall` step is needed —
-Drizzle generates no client.
+Build command is the default `npm run build`. Node is pinned to `22.x` in
+`package.json`, matching `.nvmrc`, so Vercel does not silently select a newer
+major runtime. No `postinstall` step is needed — Drizzle generates no client.
+
+If a deployment fails, include the log after `Running TypeScript ...`: that line
+is a progress message, not an error. Check the first compiler or environment
+validation error below it. Locally run `npm run verify` and `npm run build` on
+Node 22. Successful compilation alone does not verify production credentials or
+database migrations; check `/api/v1/health` after deployment.
 
 ## Verify
 

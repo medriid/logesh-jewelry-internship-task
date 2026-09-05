@@ -11,7 +11,11 @@ import { z } from 'zod';
  * the complete, auditable inventory of the deployment's inputs.
  */
 
-const nonEmpty = (label: string) => z.string().trim().min(1, `${label} must not be empty`);
+const nonEmpty = (label: string) =>
+  z
+    .string({ error: `${label} is required and must not be empty` })
+    .trim()
+    .min(1, `${label} must not be empty`);
 
 /** Secrets used as HMAC/encryption keys must carry real entropy, not "changeme". */
 const secretKey = (label: string) =>
@@ -147,8 +151,15 @@ export function assertDeploymentReady(config: Env = env): void {
   }
 }
 
-function load(): Env {
-  const parsed = schema.safeParse(process.env);
+/** Treat empty dashboard entries as unset, without changing nonempty secrets. */
+export function parseEnv(values: Record<string, string | undefined>): Env {
+  const normalized = Object.fromEntries(
+    Object.entries(values).map(([key, value]) => [
+      key,
+      value !== undefined && value.trim() === '' ? undefined : value,
+    ]),
+  );
+  const parsed = schema.safeParse(normalized);
 
   if (!parsed.success) {
     const lines = parsed.error.issues.map(
@@ -161,7 +172,7 @@ function load(): Env {
   return parsed.data;
 }
 
-export const env: Env = load();
+export const env: Env = parseEnv(process.env);
 
 export const isProduction = env.NODE_ENV === 'production';
 export const isTest = env.NODE_ENV === 'test';

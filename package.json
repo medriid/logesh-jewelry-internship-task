@@ -2,12 +2,12 @@
   "name": "loupe-catalog-api",
   "version": "0.1.0",
   "private": true,
-  "description": "Loupe Fine Jewellery — secure, extensible product catalog API and admin console.",
+  "description": "Loupe Fine Jewellery \u2014 secure, extensible product catalog API and admin console.",
   "author": "medriid",
   "license": "MIT",
   "type": "module",
   "engines": {
-    "node": ">=22"
+    "node": "22.x"
   },
   "scripts": {
     "dev": "next dev",
