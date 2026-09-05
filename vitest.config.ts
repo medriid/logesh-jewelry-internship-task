@@ -2,9 +2,13 @@ import { defineConfig } from 'vitest/config';
 import { fileURLToPath } from 'node:url';
 
 export default defineConfig({
+  // `server-only` resolves to an empty stub under the react-server condition,
+  // so tests can import server modules directly while the real guard still
+  // fires in any client bundle. It has to be set on the SSR resolver too:
+  // node-environment tests load through the SSR pipeline, which keeps its own
+  // condition list.
+  ssr: { resolve: { conditions: ['react-server'] } },
   resolve: {
-    // Resolve `server-only` to its empty stub so tests can import server modules
-    // directly, while the real guard still fires in any client bundle.
     conditions: ['react-server'],
     alias: {
       '@': fileURLToPath(new URL('./src', import.meta.url)),

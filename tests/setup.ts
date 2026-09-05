@@ -10,7 +10,9 @@ Object.assign(process.env, {
   APP_URL: 'http://localhost:3000',
   DATABASE_DRIVER: 'pglite',
   PGLITE_PATH: 'memory://',
-  APP_SECRET: 'test-secret-not-used-in-production-4f8a2c91d7b6e035',
+  // Deliberately not prefixed "test" — env.ts rejects placeholder-looking
+  // secrets, and it rejected this fixture the first time round.
+  APP_SECRET: 'k9Xq2mVr7bNw4pLz8HcT3yFd6JsA5gEu1QoW0iRxZnMv',
   LOG_LEVEL: 'fatal',
 
   // Argon2 at production cost turns every login test into a 200ms wait. These

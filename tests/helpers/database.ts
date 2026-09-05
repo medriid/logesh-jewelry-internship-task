@@ -90,3 +90,21 @@ export async function violationOf(write: () => Promise<unknown>): Promise<DbViol
 
   throw new Error('Expected the database to reject this write, but it was accepted.');
 }
+
+/**
+ * Migrate the application's own `db` singleton.
+ *
+ * Most integration tests use `createTestDatabase()` and talk to a disposable
+ * handle. Modules that import `@/db` directly — sessions, services — need the
+ * singleton itself migrated instead. `tests/setup.ts` points PGLITE_PATH at
+ * `memory://`, so this is still a throwaway database, one per test process.
+ */
+export async function migrateAppDatabase(): Promise<void> {
+  const [{ db }, { migrate }] = await Promise.all([
+    import('../../src/db'),
+    import('drizzle-orm/pglite/migrator'),
+  ]);
+  await migrate(db as unknown as Parameters<typeof migrate>[0], {
+    migrationsFolder: './drizzle',
+  });
+}

@@ -89,6 +89,7 @@ const schema = z
     SEED_ADMIN_PASSWORD: z.string().min(12).optional(),
   })
   .superRefine((env, ctx) => {
+    // Shape-level coherence, true in every environment including a build.
     if (env.DATABASE_DRIVER === 'postgres' && !env.DATABASE_URL) {
       ctx.addIssue({
         code: 'custom',
@@ -96,36 +97,55 @@ const schema = z
         message: 'DATABASE_URL is required when DATABASE_DRIVER=postgres',
       });
     }
-
-    if (env.NODE_ENV !== 'production') return;
-
-    // Production-only invariants. Each of these is a real incident if it ships wrong.
-    if (env.DATABASE_DRIVER !== 'postgres') {
-      ctx.addIssue({
-        code: 'custom',
-        path: ['DATABASE_DRIVER'],
-        message: 'Production must use DATABASE_DRIVER=postgres; PGlite is not durable.',
-      });
-    }
-    if (!env.APP_URL.startsWith('https://')) {
-      ctx.addIssue({
-        code: 'custom',
-        path: ['APP_URL'],
-        message: 'Production APP_URL must be https — session cookies are Secure-only.',
-      });
-    }
-    if (!env.UPSTASH_REDIS_REST_URL || !env.UPSTASH_REDIS_REST_TOKEN) {
-      ctx.addIssue({
-        code: 'custom',
-        path: ['UPSTASH_REDIS_REST_URL'],
-        message:
-          'Production requires shared rate-limit storage; the in-memory limiter does not ' +
-          'survive serverless scale-out and would leave login unthrottled.',
-      });
-    }
   });
 
 export type Env = z.infer<typeof schema>;
+
+/**
+ * Invariants that must hold for a *running production server*, checked
+ * separately from parsing.
+ *
+ * The split exists because `next build` forces NODE_ENV=production, so folding
+ * these into the schema meant a build could not succeed without production
+ * secrets — breaking CI, and breaking `npm run build` on a laptop. Relaxing
+ * them entirely would be worse: a misconfigured deploy would boot and fail on
+ * the first request.
+ *
+ * So: the build validates shape, and the server asserts deployment readiness at
+ * boot via instrumentation.ts. A Vercel deploy missing its Redis credentials
+ * dies on startup with a readable message, before it serves anything.
+ */
+export function assertDeploymentReady(config: Env = env): void {
+  if (config.NODE_ENV !== 'production') return;
+
+  const failures: string[] = [];
+
+  if (config.DATABASE_DRIVER !== 'postgres') {
+    failures.push(
+      'DATABASE_DRIVER must be "postgres" in production. PGlite writes to the local ' +
+        'filesystem, which on serverless is ephemeral and not shared between instances — ' +
+        'every write would be lost and every instance would see different data.',
+    );
+  }
+  if (!config.APP_URL.startsWith('https://')) {
+    failures.push('APP_URL must be https in production — session cookies are Secure-only.');
+  }
+  if (!config.UPSTASH_REDIS_REST_URL || !config.UPSTASH_REDIS_REST_TOKEN) {
+    failures.push(
+      'UPSTASH_REDIS_REST_URL and _TOKEN are required in production. The in-memory rate ' +
+        'limiter is per-instance, so across serverless scale-out login would be effectively ' +
+        'unthrottled.',
+    );
+  }
+
+  if (failures.length > 0) {
+    throw new Error(
+      `Refusing to start: production configuration is unsafe.\n\n` +
+        failures.map((f) => `  • ${f}`).join('\n\n') +
+        `\n\nSee docs/DEPLOYMENT.md.\n`,
+    );
+  }
+}
 
 function load(): Env {
   const parsed = schema.safeParse(process.env);

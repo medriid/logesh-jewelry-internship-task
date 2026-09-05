@@ -1,6 +1,14 @@
 import type { NextConfig } from 'next';
 
 /**
+ * Production runs on real Postgres — `assertDeploymentReady()` refuses to start
+ * otherwise — so PGlite is unreachable there. Left alone, the bundler still
+ * ships its ~17 MB of WebAssembly into every serverless function: pure
+ * cold-start tax on code that cannot execute. Alias it to a stub instead.
+ */
+const isProductionBuild = process.env.NODE_ENV === 'production';
+
+/**
  * Headers that never vary per request live here; the Content-Security-Policy
  * carries a per-request nonce and is therefore set in `src/middleware.ts`.
  */
@@ -28,6 +36,15 @@ const securityHeaders = [
 
 const nextConfig: NextConfig = {
   reactStrictMode: true,
+
+  ...(isProductionBuild && {
+    turbopack: {
+      resolveAlias: {
+        '@electric-sql/pglite': '@/db/drivers/pglite-stub',
+        'drizzle-orm/pglite': '@/db/drivers/drizzle-pglite-stub',
+      },
+    },
+  }),
 
   // Do not advertise the framework version to attackers scanning for CVEs.
   poweredByHeader: false,

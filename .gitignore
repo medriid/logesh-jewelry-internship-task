@@ -43,3 +43,6 @@ yarn-error.log*
 pnpm-debug.log*
 logs/
 *.log
+
+# personal setup notes — not part of the deliverable
+SETUP-LOCAL.md

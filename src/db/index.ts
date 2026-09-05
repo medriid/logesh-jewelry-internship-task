@@ -1,7 +1,8 @@
 import 'server-only';
 
-import { drizzle as drizzlePglite, type PgliteDatabase } from 'drizzle-orm/pglite';
-import { drizzle as drizzlePostgres, type PostgresJsDatabase } from 'drizzle-orm/postgres-js';
+import type { PgDatabase, PgQueryResultHKT } from 'drizzle-orm/pg-core';
+import { drizzle as drizzlePglite } from 'drizzle-orm/pglite';
+import { drizzle as drizzlePostgres } from 'drizzle-orm/postgres-js';
 import { PGlite } from '@electric-sql/pglite';
 import postgres from 'postgres';
 
@@ -21,7 +22,17 @@ import * as schema from './schema';
  *   postgres — a real server, over TCP. Neon in production.
  */
 
-export type Database = PgliteDatabase<typeof schema> | PostgresJsDatabase<typeof schema>;
+/**
+ * Drizzle's shared Postgres surface, rather than a union of the two concrete
+ * drivers.
+ *
+ * A union looks harmless and is not: TypeScript reduces a union of *overloaded*
+ * methods to their last signature, so `db.delete(x).returning({ id })` reported
+ * "Expected 0 arguments, but got 1" — the zero-arg `.returning()` overload was
+ * the only one left standing. Both drivers extend `PgDatabase`, which carries
+ * the full overload set once.
+ */
+export type Database = PgDatabase<PgQueryResultHKT, typeof schema>;
 
 type Handle = {
   db: Database;
@@ -71,9 +82,48 @@ function createHandle(): Handle {
   return createPglite();
 }
 
-const handle: Handle = globalForDb.__loupeDb ?? createHandle();
-if (env.NODE_ENV !== 'production') globalForDb.__loupeDb = handle;
+/**
+ * The handle is created on first *use*, never on import.
+ *
+ * Two reasons, both of which showed up as real failures before this was lazy:
+ *
+ *   1. `next build` imports every route module to collect page data. With eager
+ *      construction, building the app opened a database connection — which is
+ *      wrong on a CI runner, and fatal once production builds alias PGlite away.
+ *   2. On serverless, a route that never touches the database still paid for
+ *      connection setup at cold start simply because something up its import
+ *      graph re-exported `db`.
+ */
+let handle: Handle | null = null;
 
-export const db: Database = handle.db;
-export const closeDb = handle.close;
+function getHandle(): Handle {
+  if (handle) return handle;
+  handle = globalForDb.__loupeDb ?? createHandle();
+  if (env.NODE_ENV !== 'production') globalForDb.__loupeDb = handle;
+  return handle;
+}
+
+/**
+ * A lazy proxy, so call sites keep the plain `db.select(...)` shape rather than
+ * threading `getDb()` through every function. The first property access is what
+ * actually opens the connection.
+ */
+export const db: Database = new Proxy({} as Database, {
+  get(_target, property) {
+    const real = getHandle().db as unknown as Record<string | symbol, unknown>;
+    const value = real[property];
+    // Bind so Drizzle's internals keep their `this`.
+    return typeof value === 'function' ? value.bind(real) : value;
+  },
+}) as Database;
+
+/** No-op when nothing was ever opened — safe to call unconditionally. */
+export async function closeDb(): Promise<void> {
+  if (!handle) return;
+  const current = handle;
+  handle = null;
+  delete globalForDb.__loupeDb;
+  await current.close();
+}
+
 export { schema };
