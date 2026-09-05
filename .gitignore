@@ -1,0 +1,45 @@
+# dependencies
+node_modules/
+.pnp
+.pnp.*
+.yarn/*
+
+# next.js
+.next/
+out/
+next-env.d.ts
+
+# production
+build/
+dist/
+
+# local database (PGlite dev store)
+.pglite/
+*.sqlite
+*.db
+
+# env — NEVER commit real secrets
+.env
+.env.*
+!.env.example
+
+# testing
+coverage/
+.vitest/
+
+# misc
+.DS_Store
+*.pem
+.vercel
+*.tsbuildinfo
+.idea/
+.vscode/*
+!.vscode/extensions.json
+!.vscode/settings.json
+
+# logs
+npm-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+logs/
+*.log
